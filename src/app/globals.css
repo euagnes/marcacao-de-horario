@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-mar-50 text-mar-900 antialiased;
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 font-semibold transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn bg-mar-500 text-white shadow-suave hover:bg-mar-600;
+  }
+  .btn-sol {
+    @apply btn bg-laranja-500 text-white shadow-suave hover:bg-laranja-400;
+  }
+  .btn-laranja {
+    @apply btn bg-laranja-500 text-white shadow-suave hover:bg-laranja-400;
+  }
+  .btn-coral {
+    @apply btn bg-coral-500 text-white hover:bg-coral-400;
+  }
+  .btn-ghost {
+    @apply btn bg-white text-mar-700 ring-1 ring-mar-200 hover:bg-mar-50;
+  }
+  .card {
+    @apply rounded-2xl bg-white p-6 shadow-suave ring-1 ring-mar-100;
+  }
+  .input {
+    @apply w-full rounded-xl border border-mar-200 bg-white px-4 py-3 text-mar-900 outline-none transition focus:border-mar-400 focus:ring-2 focus:ring-mar-200;
+  }
+  .label {
+    @apply mb-1 block text-sm font-medium text-mar-700;
+  }
+  .badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold;
+  }
+}

@@ -1,0 +1,20 @@
+# Variáveis de ambiente com dados sensíveis
+.env
+.env.local
+.env.*.local
+
+# Dependências
+/node_modules
+
+# Build do Next.js
+/.next/
+/out/
+next-env.d.ts
+
+# Prisma
+/prisma/*.db
+
+# Logs e SO
+*.log
+.DS_Store
+Thumbs.db
