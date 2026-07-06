@@ -15,7 +15,7 @@ export async function GET(req: Request) {
   const usuarios = await prisma.usuario.findMany({
     where,
     select: {
-      id: true, nome: true, email: true, telefone: true,
+      id: true, nome: true, email: true, cpf: true, telefone: true, fotoUrl: true,
       status: true, criadoEm: true, aprovadoEm: true,
       _count: { select: { agendamentos: true } },
     },

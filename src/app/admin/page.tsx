@@ -4,8 +4,11 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Logo from "@/components/Logo";
 import { NOMES_DIAS } from "@/lib/horarios";
+import { formatarCpf } from "@/lib/cpf";
 
-type Aba = "painel" | "reservas" | "usuarios" | "horarios" | "bloqueios";
+type Aba =
+  | "painel" | "reservas" | "usuarios" | "horarios" | "bloqueios"
+  | "avisos" | "noticias" | "eventos" | "teatro";
 
 function hojeISO() {
   const d = new Date();
@@ -48,6 +51,10 @@ export default function AdminPage() {
     { id: "painel", label: "📊 Painel" },
     { id: "reservas", label: "📋 Reservas" },
     { id: "usuarios", label: "👥 Usuários" },
+    { id: "avisos", label: "📢 Quadro de Avisos" },
+    { id: "noticias", label: "📰 Notícias" },
+    { id: "eventos", label: "🎉 Eventos" },
+    { id: "teatro", label: "🎭 Teatro / Cultura" },
     { id: "horarios", label: "🕒 Horários" },
     { id: "bloqueios", label: "🚫 Bloqueios" },
   ];
@@ -79,6 +86,10 @@ export default function AdminPage() {
         {aba === "painel" && <Painel />}
         {aba === "reservas" && <Reservas />}
         {aba === "usuarios" && <Usuarios />}
+        {aba === "avisos" && <Publicacoes tipo="AVISO" titulo="Quadro de Avisos" temDestaque />}
+        {aba === "noticias" && <Publicacoes tipo="NOTICIA" titulo="Notícias" />}
+        {aba === "eventos" && <Publicacoes tipo="EVENTO" titulo="Eventos" temData />}
+        {aba === "teatro" && <Publicacoes tipo="TEATRO" titulo="Teatro / Programação Cultural" temData />}
         {aba === "horarios" && <Horarios />}
         {aba === "bloqueios" && <Bloqueios />}
       </main>
@@ -361,9 +372,12 @@ function Usuarios() {
             onClick={() => setDetalhe(u)}
             className="card flex w-full flex-wrap items-center justify-between gap-3 !p-4 text-left transition hover:ring-2 hover:ring-mar-200"
           >
-            <div>
-              <p className="font-bold text-mar-800">{u.nome}</p>
-              <p className="text-sm text-mar-500">{u.email} · {u.telefone}</p>
+            <div className="flex items-center gap-3">
+              <Avatar foto={u.fotoUrl} nome={u.nome} />
+              <div>
+                <p className="font-bold text-mar-800">{u.nome}</p>
+                <p className="text-sm text-mar-500">{u.email} · {u.telefone}</p>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <span className={`badge ${STATUS_USER_CLS[u.status]}`}>{u.status}</span>
@@ -385,14 +399,18 @@ function Usuarios() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-mar-800">{detalhe.nome}</h2>
-                <span className={`badge mt-1 ${STATUS_USER_CLS[detalhe.status]}`}>{detalhe.status}</span>
+              <div className="flex items-center gap-3">
+                <Avatar foto={detalhe.fotoUrl} nome={detalhe.nome} size={56} />
+                <div>
+                  <h2 className="text-xl font-bold text-mar-800">{detalhe.nome}</h2>
+                  <span className={`badge mt-1 ${STATUS_USER_CLS[detalhe.status]}`}>{detalhe.status}</span>
+                </div>
               </div>
               <button onClick={() => setDetalhe(null)} className="grid h-9 w-9 place-items-center rounded-lg text-mar-500 hover:bg-mar-50">✕</button>
             </div>
 
             <dl className="mt-5 space-y-3 text-sm">
+              <Campo rotulo="CPF" valor={detalhe.cpf ? formatarCpf(detalhe.cpf) : "—"} />
               <Campo rotulo="E-mail" valor={detalhe.email} />
               <Campo rotulo="Telefone / WhatsApp" valor={detalhe.telefone} />
               <Campo rotulo="Reservas feitas" valor={String(detalhe._count?.agendamentos ?? 0)} />
@@ -437,6 +455,23 @@ function Usuarios() {
         </div>
       )}
     </div>
+  );
+}
+
+function Avatar({ foto, nome, size = 40 }: { foto?: string | null; nome: string; size?: number }) {
+  const iniciais = nome.split(" ").slice(0, 2).map((p) => p[0]).join("").toUpperCase();
+  return (
+    <span
+      className="grid shrink-0 place-items-center overflow-hidden rounded-full bg-mar-100 font-semibold text-mar-600 ring-1 ring-mar-200"
+      style={{ width: size, height: size, fontSize: size * 0.36 }}
+    >
+      {foto ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={foto} alt={nome} className="h-full w-full object-cover" />
+      ) : (
+        iniciais || "?"
+      )}
+    </span>
   );
 }
 
@@ -646,6 +681,173 @@ function Bloqueios() {
           </div>
         ))}
         {!lista.length && <p className="text-mar-400">Nenhum bloqueio cadastrado.</p>}
+      </div>
+    </div>
+  );
+}
+
+/* ----------------------------- PUBLICAÇÕES (Avisos/Notícias/Eventos/Teatro) ----------------------------- */
+function Publicacoes({
+  tipo,
+  titulo,
+  temData = false,
+  temDestaque = false,
+}: {
+  tipo: "AVISO" | "NOTICIA" | "EVENTO" | "TEATRO";
+  titulo: string;
+  temData?: boolean;
+  temDestaque?: boolean;
+}) {
+  const [lista, setLista] = useState<any[]>([]);
+  const [editId, setEditId] = useState<number | null>(null);
+  const [form, setForm] = useState<any>({
+    titulo: "", resumo: "", conteudo: "", local: "", dataEvento: "", destaque: temDestaque, publicado: true,
+  });
+  const [salvando, setSalvando] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const carregar = useCallback(() => {
+    fetch(`/api/admin/publicacoes?tipo=${tipo}`).then((r) => r.json()).then(setLista);
+  }, [tipo]);
+  useEffect(() => { carregar(); }, [carregar]);
+
+  function limpar() {
+    setEditId(null);
+    setForm({ titulo: "", resumo: "", conteudo: "", local: "", dataEvento: "", destaque: temDestaque, publicado: true });
+  }
+
+  function editar(p: any) {
+    setEditId(p.id);
+    setForm({
+      titulo: p.titulo ?? "",
+      resumo: p.resumo ?? "",
+      conteudo: p.conteudo ?? "",
+      local: p.local ?? "",
+      dataEvento: p.dataEvento ? new Date(p.dataEvento).toISOString().slice(0, 16) : "",
+      destaque: p.destaque,
+      publicado: p.publicado,
+    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function salvar(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.titulo.trim() || !form.resumo.trim()) { setMsg("Preencha título e resumo."); return; }
+    setSalvando(true);
+    setMsg(null);
+    try {
+      const body = { ...form, tipo, dataEvento: form.dataEvento || null };
+      const url = editId ? `/api/admin/publicacoes/${editId}` : "/api/admin/publicacoes";
+      const method = editId ? "PATCH" : "POST";
+      const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      if (!res.ok) { const j = await res.json().catch(() => ({})); setMsg(j.erro ?? "Erro ao salvar."); return; }
+      limpar();
+      setMsg(editId ? "Publicação atualizada!" : "Publicação criada!");
+      carregar();
+      setTimeout(() => setMsg(null), 2500);
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function togglePublicado(p: any) {
+    await fetch(`/api/admin/publicacoes/${p.id}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ publicado: !p.publicado }),
+    });
+    carregar();
+  }
+  async function toggleDestaque(p: any) {
+    await fetch(`/api/admin/publicacoes/${p.id}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ destaque: !p.destaque }),
+    });
+    carregar();
+  }
+  async function excluir(id: number) {
+    if (!confirm("Remover esta publicação?")) return;
+    await fetch(`/api/admin/publicacoes/${id}`, { method: "DELETE" });
+    if (editId === id) limpar();
+    carregar();
+  }
+
+  return (
+    <div>
+      <h1 className="text-2xl font-bold text-mar-800">{titulo}</h1>
+
+      {/* Formulário */}
+      <form onSubmit={salvar} className="card mt-4 space-y-3">
+        <h2 className="font-semibold text-mar-700">{editId ? "Editar publicação" : "Nova publicação"}</h2>
+        <div>
+          <label className="label">Título *</label>
+          <input className="input" value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} />
+        </div>
+        <div>
+          <label className="label">Resumo * (aparece no card)</label>
+          <input className="input" value={form.resumo} onChange={(e) => setForm({ ...form, resumo: e.target.value })} />
+        </div>
+        <div>
+          <label className="label">Conteúdo completo (opcional)</label>
+          <textarea className="input min-h-[80px]" value={form.conteudo} onChange={(e) => setForm({ ...form, conteudo: e.target.value })} />
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className="label">Local (opcional)</label>
+            <input className="input" value={form.local} onChange={(e) => setForm({ ...form, local: e.target.value })} placeholder="Ex: Teatro Municipal" />
+          </div>
+          {temData && (
+            <div>
+              <label className="label">Data e hora do evento</label>
+              <input type="datetime-local" className="input" value={form.dataEvento} onChange={(e) => setForm({ ...form, dataEvento: e.target.value })} />
+            </div>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-4">
+          {temDestaque && (
+            <label className="flex items-center gap-2 text-sm text-mar-700">
+              <input type="checkbox" checked={form.destaque} onChange={(e) => setForm({ ...form, destaque: e.target.checked })} />
+              Destacar no Quadro de Avisos
+            </label>
+          )}
+          <label className="flex items-center gap-2 text-sm text-mar-700">
+            <input type="checkbox" checked={form.publicado} onChange={(e) => setForm({ ...form, publicado: e.target.checked })} />
+            Publicado (visível no site)
+          </label>
+        </div>
+        {msg && <p className="rounded-lg bg-mar-100 px-4 py-2 text-sm text-mar-700">{msg}</p>}
+        <div className="flex gap-2">
+          <button disabled={salvando} className="btn-primary">{salvando ? "Salvando…" : editId ? "Salvar alterações" : "Publicar"}</button>
+          {editId && <button type="button" onClick={limpar} className="btn-ghost">Cancelar</button>}
+        </div>
+      </form>
+
+      {/* Lista */}
+      <div className="mt-6 space-y-2">
+        {lista.map((p) => (
+          <div key={p.id} className="card flex flex-wrap items-center justify-between gap-3 !p-4">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-mar-800">{p.titulo}</span>
+                {!p.publicado && <span className="badge bg-mar-100 text-mar-500">Rascunho</span>}
+                {p.destaque && <span className="badge bg-laranja-100 text-laranja-600">Destaque</span>}
+              </div>
+              <p className="text-sm text-mar-500">{p.resumo}</p>
+              {(p.local || p.dataEvento) && (
+                <p className="mt-0.5 text-xs text-mar-400">
+                  {p.dataEvento && `🗓️ ${new Date(p.dataEvento).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}`}
+                  {p.local && `  📍 ${p.local}`}
+                </p>
+              )}
+            </div>
+            <div className="flex flex-wrap items-center gap-1">
+              <button onClick={() => togglePublicado(p)} className="btn-ghost !px-3 !py-1 text-xs">{p.publicado ? "Despublicar" : "Publicar"}</button>
+              {temDestaque && <button onClick={() => toggleDestaque(p)} className="btn-ghost !px-3 !py-1 text-xs">{p.destaque ? "Tirar destaque" : "Destacar"}</button>}
+              <button onClick={() => editar(p)} className="btn-primary !px-3 !py-1 text-xs">Editar</button>
+              <button onClick={() => excluir(p.id)} className="btn-coral !px-3 !py-1 text-xs">🗑</button>
+            </div>
+          </div>
+        ))}
+        {!lista.length && <p className="text-mar-400">Nenhuma publicação cadastrada.</p>}
       </div>
     </div>
   );

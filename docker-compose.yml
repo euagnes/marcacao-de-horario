@@ -1,0 +1,62 @@
+# ==========================================================
+# Praça CEU — stack completa (app Next.js + Postgres)
+# Suba com:  docker compose up -d --build
+# App em:    http://localhost:3000
+# ==========================================================
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: praca-ceu-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ceu
+      POSTGRES_PASSWORD: ceu_senha_forte
+      POSTGRES_DB: agendamentoQuadra
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ceu -d agendamentoQuadra"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      args:
+        # NEXT_PUBLIC_* precisam existir no build (embutidas no front-end)
+        NEXT_PUBLIC_WHATSAPP: "${NEXT_PUBLIC_WHATSAPP:-5575999998888}"
+        NEXT_PUBLIC_TELEFONE: "${NEXT_PUBLIC_TELEFONE:-(75) 99999-8888}"
+        NEXT_PUBLIC_ENDERECO: "${NEXT_PUBLIC_ENDERECO:-CEU - Centro de Artes e Esportes Unificados}"
+        NEXT_PUBLIC_BASE_URL: "${NEXT_PUBLIC_BASE_URL:-http://localhost:3000}"
+    container_name: praca-ceu-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Banco (aponta para o serviço "db" desta stack)
+      DATABASE_URL: "postgresql://ceu:ceu_senha_forte@db:5432/agendamentoQuadra?schema=public"
+      # Administrador
+      ADMIN_EMAIL: "${ADMIN_EMAIL:-admin@ceu.com.br}"
+      ADMIN_PASSWORD: "${ADMIN_PASSWORD:-ceu@2026}"
+      AUTH_SECRET: "${AUTH_SECRET:-troque-este-segredo-por-uma-string-aleatoria-bem-longa}"
+      # E-mail via n8n (opcional)
+      N8N_EMAIL_WEBHOOK_URL: "${N8N_EMAIL_WEBHOOK_URL:-}"
+      # E-mail Brevo (fallback, opcional)
+      BREVO_SMTP_KEY: "${BREVO_SMTP_KEY:-}"
+      BREVO_SMTP_LOGIN: "${BREVO_SMTP_LOGIN:-}"
+      EMAIL_FROM: "${EMAIL_FROM:-contato@ceu.com.br}"
+      EMAIL_FROM_NAME: "${EMAIL_FROM_NAME:-Praça CEU}"
+      # Contato (server-side)
+      NEXT_PUBLIC_WHATSAPP: "${NEXT_PUBLIC_WHATSAPP:-5575999998888}"
+      NEXT_PUBLIC_TELEFONE: "${NEXT_PUBLIC_TELEFONE:-(75) 99999-8888}"
+      NEXT_PUBLIC_ENDERECO: "${NEXT_PUBLIC_ENDERECO:-CEU - Centro de Artes e Esportes Unificados}"
+      NEXT_PUBLIC_BASE_URL: "${NEXT_PUBLIC_BASE_URL:-http://localhost:3000}"
+    ports:
+      - "3000:3000"
+
+volumes:
+  db_data:

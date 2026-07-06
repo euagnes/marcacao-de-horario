@@ -21,7 +21,9 @@ model Usuario {
   id           Int           @id @default(autoincrement())
   nome         String
   email        String        @unique
+  cpf          String?       @unique
   telefone     String
+  fotoUrl      String?       @map("foto_url") // data URL (imagem redimensionada)
   senhaHash    String        @map("senha_hash")
   status       StatusUsuario @default(PENDENTE)
   criadoEm     DateTime      @default(now()) @map("criado_em")
@@ -126,6 +128,34 @@ model Bloqueio {
 
   @@index([data])
   @@map("bloqueios")
+}
+
+// ----------------------------------------------------------------------------
+// Publicações — Quadro de Avisos, Notícias, Eventos e Teatro/Cultura
+// ----------------------------------------------------------------------------
+enum TipoPublicacao {
+  AVISO
+  NOTICIA
+  EVENTO
+  TEATRO
+}
+
+model Publicacao {
+  id         Int            @id @default(autoincrement())
+  tipo       TipoPublicacao
+  titulo     String
+  resumo     String
+  conteudo   String? // texto completo (opcional)
+  local      String? // p/ eventos/teatro
+  dataEvento DateTime? @map("data_evento") // p/ eventos/teatro
+  imagemUrl  String?   @map("imagem_url")
+  destaque   Boolean   @default(false) // aparece no Quadro de Avisos
+  publicado  Boolean   @default(true) // visível no site
+  criadoEm   DateTime  @default(now()) @map("criado_em")
+
+  @@index([tipo])
+  @@index([publicado])
+  @@map("publicacoes")
 }
 
 // ----------------------------------------------------------------------------
