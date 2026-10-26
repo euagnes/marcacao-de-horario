@@ -7,7 +7,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Calendario from "@/components/Calendario";
 import { dataLimiteAgendamento } from "@/lib/horarios";
-import { linkWhatsApp } from "@/lib/config";
+import { AVISO_PAGAMENTO, formatarReais, linkWhatsApp, mensagemPedidoReserva } from "@/lib/config";
 
 interface Quadra {
   id: number;
@@ -28,6 +28,7 @@ interface Confirmacao {
   data: string;
   horaInicio: string;
   horaFim: string;
+  valorTotal: number | null;
 }
 
 function dataLegivel(iso: string) {
@@ -44,6 +45,7 @@ export default function AgendarPage() {
   const [quadraId, setQuadraId] = useState<number | null>(null);
   const [data, setData] = useState<string | null>(null);
   const [slots, setSlots] = useState<Slot[]>([]);
+  const [valorHora, setValorHora] = useState<number | null>(null);
   const [carregandoSlots, setCarregandoSlots] = useState(false);
 
   const [horaSelecionada, setHoraSelecionada] = useState<string | null>(null);
@@ -56,6 +58,18 @@ export default function AgendarPage() {
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [confirmacao, setConfirmacao] = useState<Confirmacao | null>(null);
+  const [enviouWhatsApp, setEnviouWhatsApp] = useState(false);
+
+  // Avisa antes de sair da página se o pedido ainda não foi enviado no WhatsApp
+  useEffect(() => {
+    if (!confirmacao || enviouWhatsApp) return;
+    const aviso = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", aviso);
+    return () => window.removeEventListener("beforeunload", aviso);
+  }, [confirmacao, enviouWhatsApp]);
 
   // Carrega quadras e o usuário logado
   useEffect(() => {
@@ -84,7 +98,10 @@ export default function AgendarPage() {
     setHoraSelecionada(null);
     fetch(`/api/disponibilidade?data=${data}&quadraId=${quadraId}`)
       .then((r) => r.json())
-      .then((d) => setSlots(d.slots ?? []))
+      .then((d) => {
+        setSlots(d.slots ?? []);
+        setValorHora(d.valorHora ?? null);
+      })
       .finally(() => setCarregandoSlots(false));
   }, [data, quadraId]);
 
@@ -152,19 +169,33 @@ export default function AgendarPage() {
     }
   }
 
-  // ---- Tela de confirmação ----
+  // ---- Tela pós-pedido: a reserva fica PENDENTE até a equipe aprovar ----
   if (confirmacao) {
-    const msg = `Olá! Confirmei minha reserva na ${confirmacao.quadra} em ${dataLegivel(
-      confirmacao.data
-    )}, das ${confirmacao.horaInicio} às ${confirmacao.horaFim}. Código: ${confirmacao.codigo}`;
+    const msg = mensagemPedidoReserva({ ...confirmacao, data: dataLegivel(confirmacao.data) });
     return (
       <>
         <Header />
         <main className="mx-auto max-w-xl px-4 py-16">
           <div className="card text-center">
-            <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-green-100 text-3xl">✅</div>
-            <h1 className="mt-4 text-2xl font-bold text-mar-800">Reserva confirmada!</h1>
-            <p className="mt-1 text-mar-600">Guarde seu código para gerenciar a reserva.</p>
+            {!enviouWhatsApp ? (
+              <>
+                <span className="badge bg-sol-100 text-sol-600">Aguardando aprovação</span>
+                <h1 className="mt-4 text-3xl font-extrabold text-mar-900">Falta um passo: envie seu pedido no WhatsApp</h1>
+                <p className="mt-2 text-mar-600">
+                  Sua reserva <strong>ainda não está confirmada</strong>. Ela só entra na fila de aprovação da equipe
+                  depois que você enviar a mensagem com os dados abaixo.
+                </p>
+              </>
+            ) : (
+              <>
+                <span className="badge bg-sol-100 text-sol-600">Aguardando aprovação</span>
+                <h1 className="mt-4 text-3xl font-extrabold text-mar-900">Pedido enviado</h1>
+                <p className="mt-2 text-mar-600">
+                  A equipe da Praia do Norte vai conferir o horário e confirmar sua reserva pelo WhatsApp. O pagamento
+                  é combinado na mesma conversa.
+                </p>
+              </>
+            )}
 
             <div className="mt-6 rounded-xl bg-mar-50 p-5 text-left">
               <Linha rotulo="Código" valor={confirmacao.codigo} destaque />
@@ -173,16 +204,33 @@ export default function AgendarPage() {
               {confirmacao.modalidade && <Linha rotulo="Modalidade" valor={confirmacao.modalidade} />}
               <Linha rotulo="Data" valor={dataLegivel(confirmacao.data)} />
               <Linha rotulo="Horário" valor={`${confirmacao.horaInicio} às ${confirmacao.horaFim}`} />
+              <Linha
+                rotulo="Valor"
+                valor={confirmacao.valorTotal != null ? formatarReais(confirmacao.valorTotal) : "A combinar"}
+                destaque
+              />
             </div>
 
+            <p className="mt-4 text-left text-sm text-mar-600">{AVISO_PAGAMENTO}</p>
+
             <div className="mt-6 flex flex-col gap-3">
-              <a href={linkWhatsApp(msg)} target="_blank" rel="noopener noreferrer" className="btn-sol">
-                💬 Enviar confirmação por WhatsApp
+              <a
+                href={linkWhatsApp(msg)}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setEnviouWhatsApp(true)}
+                className={enviouWhatsApp ? "btn-ghost" : "btn-laranja rounded-full py-4 text-lg"}
+              >
+                {enviouWhatsApp ? "Abrir o WhatsApp de novo" : "Enviar pedido no WhatsApp"}
               </a>
-              <Link href={`/cancelar?codigo=${confirmacao.codigo}`} className="btn-ghost">
-                Gerenciar / cancelar reserva
-              </Link>
-              <Link href="/" className="text-sm text-mar-500 hover:underline">Voltar ao início</Link>
+              {enviouWhatsApp && (
+                <>
+                  <Link href="/minha-conta" className="btn-primary">Ver minhas reservas</Link>
+                  <Link href={`/cancelar?codigo=${confirmacao.codigo}`} className="text-sm text-mar-500 hover:underline">
+                    Cancelar ou remarcar
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </main>
@@ -206,7 +254,7 @@ export default function AgendarPage() {
           <div className="space-y-6">
             <div className="card">
               <h2 className="label">1. Escolha a quadra</h2>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-3 sm:grid-cols-3">
                 {quadras.map((q) => (
                   <button
                     key={q.id}
@@ -236,7 +284,14 @@ export default function AgendarPage() {
           {/* Coluna 2: horários + formulário */}
           <div className="space-y-6">
             <div className="card">
-              <h2 className="label">3. Horários disponíveis</h2>
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <h2 className="label">3. Horários disponíveis</h2>
+                {data && slots.length > 0 && (
+                  <span className="text-sm font-semibold text-laranja-600">
+                    {valorHora != null ? `${formatarReais(valorHora)} por hora neste dia` : "Valor a combinar"}
+                  </span>
+                )}
+              </div>
               {!data ? (
                 <p className="py-6 text-center text-sm text-mar-400">Selecione uma data ao lado.</p>
               ) : carregandoSlots ? (
@@ -323,6 +378,12 @@ export default function AgendarPage() {
               {horaSelecionada && (
                 <div className="rounded-xl bg-mar-50 p-3 text-sm text-mar-700">
                   📅 {data && dataLegivel(data)} · ⏰ {horaSelecionada} às {horaFimSelecionada}
+                  <p className="mt-1 font-bold text-mar-900">
+                    Total: {valorHora != null ? formatarReais(valorHora * quantidade) : "a combinar"}
+                    {valorHora != null && quantidade === 2 && (
+                      <span className="font-normal text-mar-500"> (2 × {formatarReais(valorHora)})</span>
+                    )}
+                  </p>
                 </div>
               )}
 
@@ -335,10 +396,11 @@ export default function AgendarPage() {
                   required
                 >
                   <option value="">Selecione a modalidade…</option>
-                  <option value="Basquete">Basquete</option>
-                  <option value="Futsal">Futsal</option>
+                  <option value="Beach Tennis">Beach Tennis</option>
+                  <option value="Futevôlei">Futevôlei</option>
+                  <option value="Vôlei de Praia">Vôlei de Praia</option>
+                  <option value="Funcional">Funcional</option>
                   <option value="Queimada">Queimada</option>
-                  <option value="Vôlei">Vôlei</option>
                   <option value="Outro">Outro</option>
                 </select>
                 {modalidade === "Outro" && (
@@ -362,6 +424,10 @@ export default function AgendarPage() {
                 />
               </div>
 
+              <p className="rounded-xl bg-sol-100 p-3 text-sm text-mar-800">
+                Depois de solicitar, você envia o pedido no WhatsApp e a equipe confirma a reserva. {AVISO_PAGAMENTO}
+              </p>
+
               {erro && (
                 <p className="rounded-lg bg-coral-500/10 px-4 py-2 text-sm text-coral-500">{erro}</p>
               )}
@@ -371,7 +437,7 @@ export default function AgendarPage() {
                 disabled={enviando || !horaSelecionada}
                 className="btn-sol w-full text-base"
               >
-                {enviando ? "Enviando…" : "Confirmar reserva"}
+                {enviando ? "Enviando…" : "Solicitar reserva"}
               </button>
             </form>
           </div>

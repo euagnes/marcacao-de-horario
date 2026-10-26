@@ -24,6 +24,8 @@ export async function GET() {
       horaInicio: a.horaInicio,
       horaFim: a.horaFim,
       status: a.status,
+      modalidade: a.modalidade,
+      valorTotal: a.valorTotal == null ? null : Number(a.valorTotal),
       observacoes: a.observacoes,
     }))
   );

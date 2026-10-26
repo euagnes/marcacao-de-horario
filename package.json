@@ -2,7 +2,7 @@
   "name": "ceu-agendamento-quadras",
   "version": "1.0.0",
   "private": true,
-  "description": "Sistema de agendamento de quadras de areia - CEU",
+  "description": "Sistema de agendamento de quadras e aulas - Praia do Norte",
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",

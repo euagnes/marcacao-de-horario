@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import Logo from "@/components/Logo";
 import { NOMES_DIAS } from "@/lib/horarios";
 import { formatarCpf } from "@/lib/cpf";
+import { formatarReais } from "@/lib/config";
+import AdminAulas from "@/components/AdminAulas";
 
 type Aba =
-  | "painel" | "reservas" | "usuarios" | "horarios" | "bloqueios"
+  | "painel" | "reservas" | "usuarios" | "aulas" | "horarios" | "bloqueios"
   | "avisos" | "noticias" | "eventos" | "teatro";
 
 function hojeISO() {
@@ -31,8 +33,9 @@ function avisarAprovacaoWhatsApp(a: {
   const fone = (a.telefone || "").replace(/\D/g, "");
   const dataBR = new Date(`${a.data}T00:00:00`).toLocaleDateString("pt-BR");
   const msg =
-    `Olá, ${a.cliente}! ✅\n\nSua reserva no Praça CEU foi APROVADA:\n` +
-    `🏐 ${a.quadra}\n📅 ${dataBR}\n⏰ ${a.horaInicio} às ${a.horaFim}\n\nBom jogo! 🎉`;
+    `Olá, ${a.cliente}! ✅\n\nSua reserva na Praia do Norte foi APROVADA:\n` +
+    `🏐 ${a.quadra}\n📅 ${dataBR}\n⏰ ${a.horaInicio} às ${a.horaFim}\n\n` +
+    `💳 O pagamento é feito pessoalmente na arena ou por aqui no WhatsApp.\n\nBom jogo! 🎉`;
   if (!fone) { alert("Reserva confirmada! (cliente sem telefone para WhatsApp)"); return; }
   window.open(`https://wa.me/${fone}?text=${encodeURIComponent(msg)}`, "_blank");
 }
@@ -51,22 +54,23 @@ export default function AdminPage() {
     { id: "painel", label: "📊 Painel" },
     { id: "reservas", label: "📋 Reservas" },
     { id: "usuarios", label: "👥 Usuários" },
+    { id: "aulas", label: "🎾 Aulas" },
     { id: "avisos", label: "📢 Quadro de Avisos" },
     { id: "noticias", label: "📰 Notícias" },
     { id: "eventos", label: "🎉 Eventos" },
-    { id: "teatro", label: "🎭 Teatro / Cultura" },
-    { id: "horarios", label: "🕒 Horários" },
+    { id: "teatro", label: "🏆 Torneios" },
+    { id: "horarios", label: "🕒 Horários e valores" },
     { id: "bloqueios", label: "🚫 Bloqueios" },
   ];
 
   return (
     <div className="min-h-screen bg-mar-50">
-      <header className="border-b border-mar-100 bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+      <header className="border-b border-mar-100 bg-superficie">
+        <div className="flex items-center justify-between px-4 py-3 sm:px-8">
           <Logo />
           <button onClick={sair} className="btn-ghost !px-4 !py-2 text-sm">Sair</button>
         </div>
-        <nav className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-2 pb-2">
+        <nav className="flex gap-1 overflow-x-auto px-2 pb-2 sm:px-6">
           {abas.map((a) => (
             <button
               key={a.id}
@@ -82,14 +86,15 @@ export default function AdminPage() {
         </nav>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-8">
+      <main className="px-4 py-8 sm:px-8">
         {aba === "painel" && <Painel />}
         {aba === "reservas" && <Reservas />}
         {aba === "usuarios" && <Usuarios />}
+        {aba === "aulas" && <AdminAulas />}
         {aba === "avisos" && <Publicacoes tipo="AVISO" titulo="Quadro de Avisos" temDestaque />}
         {aba === "noticias" && <Publicacoes tipo="NOTICIA" titulo="Notícias" />}
         {aba === "eventos" && <Publicacoes tipo="EVENTO" titulo="Eventos" temData />}
-        {aba === "teatro" && <Publicacoes tipo="TEATRO" titulo="Teatro / Programação Cultural" temData />}
+        {aba === "teatro" && <Publicacoes tipo="TEATRO" titulo="Torneios" temData />}
         {aba === "horarios" && <Horarios />}
         {aba === "bloqueios" && <Bloqueios />}
       </main>
@@ -155,6 +160,7 @@ function Painel() {
                 <span className="font-mono font-bold text-mar-800">{a.horaInicio}–{a.horaFim}</span>
                 <span className="ml-3 text-mar-700">{a.cliente}</span>
                 <span className="ml-2 text-sm text-mar-400">· {a.quadra}{a.modalidade ? ` · ${a.modalidade}` : ""} · {a.telefone}</span>
+                {a.valorTotal != null && <span className="ml-2 text-sm font-bold text-laranja-600">{formatarReais(a.valorTotal)}</span>}
               </div>
               <div className="flex items-center gap-2">
                 <span className={`badge ${STATUS_CLS[a.status]}`}>{a.status}</span>
@@ -259,7 +265,7 @@ function Reservas() {
           <thead>
             <tr className="text-left text-mar-400">
               <th className="p-2">Data</th><th className="p-2">Horário</th><th className="p-2">Quadra</th>
-              <th className="p-2">Modalidade</th><th className="p-2">Cliente</th><th className="p-2">Telefone</th><th className="p-2">Status</th><th className="p-2">Ações</th>
+              <th className="p-2">Modalidade</th><th className="p-2">Cliente</th><th className="p-2">Telefone</th><th className="p-2">Valor</th><th className="p-2">Status</th><th className="p-2">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -271,6 +277,7 @@ function Reservas() {
                 <td className="p-2">{a.modalidade ?? "—"}</td>
                 <td className="p-2">{a.cliente}</td>
                 <td className="p-2">{a.telefone}</td>
+                <td className="whitespace-nowrap p-2 font-semibold">{a.valorTotal != null ? formatarReais(a.valorTotal) : "—"}</td>
                 <td className="p-2"><span className={`badge ${STATUS_CLS[a.status]}`}>{a.status}</span></td>
                 <td className="p-2">
                   <div className="flex gap-1">
@@ -281,7 +288,7 @@ function Reservas() {
                 </td>
               </tr>
             ))}
-            {!lista.length && <tr><td colSpan={8} className="p-6 text-center text-mar-400">Nenhuma reserva encontrada.</td></tr>}
+            {!lista.length && <tr><td colSpan={9} className="p-6 text-center text-mar-400">Nenhuma reserva encontrada.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -395,7 +402,7 @@ function Usuarios() {
           onClick={() => setDetalhe(null)}
         >
           <div
-            className="w-full max-w-md rounded-t-2xl bg-white p-6 shadow-suave sm:rounded-2xl"
+            className="w-full max-w-md rounded-t-2xl bg-superficie p-6 shadow-suave sm:rounded-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between">
@@ -547,14 +554,17 @@ function QuadrasStatus() {
 /* ----------------------------- HORÁRIOS ----------------------------- */
 function Horarios() {
   const [lista, setLista] = useState<any[]>([]);
-  const [msg, setMsg] = useState<string | null>(null);
+  const [valorPadrao, setValorPadrao] = useState("");
+  const [msg, setMsg] = useState<{ ok: boolean; texto: string } | null>(null);
 
   useEffect(() => {
     fetch("/api/admin/horarios").then((r) => r.json()).then((dados) => {
       // Garante os 7 dias mesmo que falte algum
       const completos = Array.from({ length: 7 }, (_, dia) => {
         const existente = dados.find((h: any) => h.diaSemana === dia);
-        return existente ?? { diaSemana: dia, horaInicio: "07:00", horaFim: "22:00", ativo: false };
+        const h = existente ?? { diaSemana: dia, horaInicio: "07:00", horaFim: "22:00", ativo: false, valorHora: null };
+        // O campo de valor é texto no formulário ("50,00")
+        return { ...h, valorHora: h.valorHora == null ? "" : String(h.valorHora).replace(".", ",") };
       });
       setLista(completos);
     });
@@ -564,20 +574,51 @@ function Horarios() {
     setLista((l) => l.map((h) => (h.diaSemana === dia ? { ...h, [campo]: valor } : h)));
   }
 
+  function aplicarATodos() {
+    setLista((l) => l.map((h) => (h.ativo ? { ...h, valorHora: valorPadrao } : h)));
+  }
+
   async function salvar() {
-    await fetch("/api/admin/horarios", {
+    const res = await fetch("/api/admin/horarios", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ horarios: lista }),
     });
-    setMsg("Horários salvos!");
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      setMsg({ ok: false, texto: j.erro ?? "Não foi possível salvar." });
+      return;
+    }
+    setMsg({ ok: true, texto: "Horários e valores salvos!" });
     setTimeout(() => setMsg(null), 2500);
   }
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-mar-800">Horários de funcionamento</h1>
-      <p className="mt-1 text-mar-500">Defina o período de funcionamento por dia da semana.</p>
+      <h1 className="text-2xl font-bold text-mar-800">Horários e valores</h1>
+      <p className="mt-1 text-mar-500">
+        Defina o funcionamento e o valor da hora de quadra para cada dia da semana. Dia sem valor aparece como
+        &quot;a combinar&quot; para o cliente.
+      </p>
+
+      {/* Atalho: mesmo valor para todos os dias abertos */}
+      <div className="card mt-4 flex flex-wrap items-end gap-3 !py-4">
+        <div>
+          <label className="label">Valor padrão da hora</label>
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-mar-600">R$</span>
+            <input
+              inputMode="decimal"
+              value={valorPadrao}
+              onChange={(e) => setValorPadrao(e.target.value)}
+              placeholder="45,00"
+              className="input !w-32"
+            />
+          </div>
+        </div>
+        <button type="button" onClick={aplicarATodos} className="btn-ghost">Aplicar a todos os dias abertos</button>
+        <p className="w-full text-xs text-mar-400 sm:w-auto">Depois ajuste os dias com preço diferente, como a sexta.</p>
+      </div>
 
       <div className="card mt-4 space-y-2">
         {lista.map((h) => (
@@ -589,12 +630,25 @@ function Horarios() {
             <input type="time" value={h.horaInicio} disabled={!h.ativo} onChange={(e) => atualizar(h.diaSemana, "horaInicio", e.target.value)} className="input !w-auto disabled:opacity-40" />
             <span className="text-mar-400">até</span>
             <input type="time" value={h.horaFim} disabled={!h.ativo} onChange={(e) => atualizar(h.diaSemana, "horaFim", e.target.value)} className="input !w-auto disabled:opacity-40" />
+            <div className="flex items-center gap-2 sm:ml-6">
+              <span className="font-semibold text-mar-600">R$</span>
+              <input
+                inputMode="decimal"
+                value={h.valorHora}
+                disabled={!h.ativo}
+                onChange={(e) => atualizar(h.diaSemana, "valorHora", e.target.value)}
+                placeholder="a combinar"
+                aria-label={`Valor da hora de ${NOMES_DIAS[h.diaSemana]}`}
+                className="input !w-32 disabled:opacity-40"
+              />
+              <span className="text-sm text-mar-400">por hora</span>
+            </div>
           </div>
         ))}
       </div>
       <div className="mt-4 flex items-center gap-3">
-        <button onClick={salvar} className="btn-primary">Salvar horários</button>
-        {msg && <span className="text-green-600">{msg}</span>}
+        <button onClick={salvar} className="btn-primary">Salvar horários e valores</button>
+        {msg && <span className={msg.ok ? "text-green-600" : "text-coral-500"}>{msg.texto}</span>}
       </div>
     </div>
   );
@@ -793,7 +847,7 @@ function Publicacoes({
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <label className="label">Local (opcional)</label>
-            <input className="input" value={form.local} onChange={(e) => setForm({ ...form, local: e.target.value })} placeholder="Ex: Teatro Municipal" />
+            <input className="input" value={form.local} onChange={(e) => setForm({ ...form, local: e.target.value })} placeholder="Ex: Quadra 1" />
           </div>
           {temData && (
             <div>
