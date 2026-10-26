@@ -67,6 +67,7 @@ export async function GET(req: Request) {
     data,
     quadraId,
     funcionamento: { inicio: funcionamento.horaInicio, fim: funcionamento.horaFim },
+    valorHora: funcionamento.valorHora == null ? null : Number(funcionamento.valorHora),
     slots,
   });
 }

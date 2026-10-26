@@ -1,6 +1,6 @@
 # 🏐 Praça CEU — Sistema de Agendamento de Quadras de Areia
 
-Site completo de agendamentos para uma empresa com **2 quadras de areia cobertas**.
+Site completo de agendamentos para a **Praia do Norte**, com **3 quadras de areia ao ar livre** e aulas.
 Clientes veem horários disponíveis em tempo real, reservam (até **2 horários seguidos**),
 recebem confirmação e podem **cancelar ou remarcar**. Há uma **área administrativa**
 para gerenciar reservas, quadras, horários de funcionamento e bloqueios.
@@ -49,7 +49,7 @@ NEXT_PUBLIC_ENDERECO="Endereço exibido no site"
 ### 4. Criar as tabelas e popular dados iniciais
 ```bash
 npm run db:push     # cria as tabelas no banco
-npm run db:seed     # cria 2 quadras + horário de funcionamento (07h–22h todos os dias)
+npm run db:seed     # cria 3 quadras + horário de funcionamento (07h–22h todos os dias)
 ```
 
 ### 5. Rodar

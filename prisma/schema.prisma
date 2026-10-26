@@ -1,4 +1,4 @@
-// Schema do sistema de agendamento de quadras de areia - CEU
+// Schema do sistema de agendamento de quadras de areia - Praia do Norte
 generator client {
   provider = "prisma-client-js"
 }
@@ -82,6 +82,8 @@ model Agendamento {
   status      StatusAgendamento @default(PENDENTE)
   modalidade  String?
   observacoes String?
+  // Valor calculado no momento do pedido (valor da hora do dia × horas)
+  valorTotal  Decimal?          @map("valor_total") @db.Decimal(10, 2)
   // Código curto para o cliente cancelar/remarcar sem login
   codigo      String            @unique @default(cuid())
   criadoEm    DateTime          @default(now()) @map("criado_em")
@@ -108,6 +110,7 @@ model HorarioFuncionamento {
   horaInicio String  @map("hora_inicio") // "HH:MM"
   horaFim    String  @map("hora_fim") // "HH:MM"
   ativo      Boolean @default(true)
+  valorHora  Decimal? @map("valor_hora") @db.Decimal(10, 2) // preço da hora de quadra neste dia
 
   @@unique([diaSemana])
   @@map("horarios_funcionamento")
@@ -156,6 +159,47 @@ model Publicacao {
   @@index([tipo])
   @@index([publicado])
   @@map("publicacoes")
+}
+
+// ----------------------------------------------------------------------------
+// Modalidades de aula (cards da página de aulas e da home, editáveis no admin)
+// ----------------------------------------------------------------------------
+model Modalidade {
+  id         Int      @id @default(autoincrement())
+  slug       String   @unique // usado no link /aulas#slug e nas turmas
+  nome       String
+  publico    String // ex: "Iniciantes ao avançado"
+  resumo     String
+  descricao  String
+  beneficios String[]
+  cor        String // chave de CORES_POSTER (src/lib/aulas.ts)
+  icone      String // chave de ILUSTRACOES (src/lib/aulas.ts)
+  ordem      Int      @default(0)
+  ativa      Boolean  @default(true) // visível no site
+  criadoEm   DateTime @default(now()) @map("criado_em")
+
+  @@map("modalidades")
+}
+
+// ----------------------------------------------------------------------------
+// Turmas de aula (horários, dias e valores exibidos na página de aulas)
+// ----------------------------------------------------------------------------
+model Turma {
+  id          Int      @id @default(autoincrement())
+  modalidade  String // slug da modalidade (ex: "futevolei")
+  diasSemana  Int[]    @map("dias_semana") // 0 = domingo ... 6 = sábado
+  horaInicio  String   @map("hora_inicio") // "HH:MM"
+  horaFim     String   @map("hora_fim") // "HH:MM"
+  nivel       String? // Iniciante, Intermediário, Avançado, Todos os níveis
+  professor   String?
+  valor       String? // texto livre, ex: "R$ 160/mês (2x por semana)"
+  vagas       Int?
+  observacoes String?
+  ativa       Boolean  @default(true) // visível no site
+  criadoEm    DateTime @default(now()) @map("criado_em")
+
+  @@index([modalidade])
+  @@map("turmas")
 }
 
 // ----------------------------------------------------------------------------

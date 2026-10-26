@@ -43,7 +43,7 @@ export async function enviarEmail({ para, assunto, html }: EnviarParams) {
           assunto,
           html,
           de: process.env.EMAIL_FROM ?? "",
-          remetente: process.env.EMAIL_FROM_NAME ?? "Praça CEU",
+          remetente: process.env.EMAIL_FROM_NAME ?? "Praia do Norte",
         }),
       });
       if (!res.ok) {
@@ -65,7 +65,7 @@ export async function enviarEmail({ para, assunto, html }: EnviarParams) {
     return { ok: false, simulado: true as const };
   }
   try {
-    const from = `"${process.env.EMAIL_FROM_NAME ?? "Praça CEU"}" <${
+    const from = `"${process.env.EMAIL_FROM_NAME ?? "Praia do Norte"}" <${
       process.env.EMAIL_FROM ?? process.env.BREVO_SMTP_LOGIN
     }>`;
     await transporte().sendMail({ from, to: para, subject: assunto, html });
@@ -80,18 +80,18 @@ export async function enviarEmail({ para, assunto, html }: EnviarParams) {
 export function emailAprovacao(nome: string) {
   const base = process.env.NEXT_PUBLIC_BASE_URL ?? "";
   return {
-    assunto: "✅ Seu cadastro no Praça CEU foi aprovado!",
+    assunto: "✅ Seu cadastro na Praia do Norte foi aprovado!",
     html: `
       <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;color:#1c404e">
-        <div style="background:linear-gradient(135deg,#1d8ca6,#6dcadd);padding:24px;border-radius:16px 16px 0 0;color:#fff">
-          <h1 style="margin:0;font-size:22px">Praça CEU</h1>
+        <div style="background:linear-gradient(135deg,#1497b0,#2fb5cb);padding:24px;border-radius:16px 16px 0 0;color:#fff">
+          <h1 style="margin:0;font-size:22px">Praia do Norte</h1>
           <p style="margin:4px 0 0;opacity:.9">Quadras de Areia</p>
         </div>
         <div style="border:1px solid #d3f0f5;border-top:0;padding:24px;border-radius:0 0 16px 16px">
           <h2 style="color:#1b5b6f">Olá, ${nome}! 🎉</h2>
           <p>Seu cadastro foi <strong>aprovado</strong>. Agora você já pode entrar e reservar suas quadras de areia.</p>
           <p style="text-align:center;margin:28px 0">
-            <a href="${base}/login" style="background:#fbb724;color:#1c404e;text-decoration:none;padding:12px 28px;border-radius:12px;font-weight:bold;display:inline-block">
+            <a href="${base}/login" style="background:#f28a12;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:12px;font-weight:bold;display:inline-block">
               Entrar e agendar
             </a>
           </p>
@@ -104,13 +104,13 @@ export function emailAprovacao(nome: string) {
 /** E-mail de cadastro recusado. */
 export function emailRejeicao(nome: string) {
   return {
-    assunto: "Sobre seu cadastro no Praça CEU",
+    assunto: "Sobre seu cadastro na Praia do Norte",
     html: `
       <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;color:#1c404e">
         <h2>Olá, ${nome}</h2>
         <p>Infelizmente seu cadastro não pôde ser aprovado neste momento.</p>
         <p>Em caso de dúvida, entre em contato conosco.</p>
-        <p>— Equipe Praça CEU</p>
+        <p>— Equipe Praia do Norte</p>
       </div>`,
   };
 }

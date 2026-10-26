@@ -3,7 +3,7 @@ import { linkWhatsApp } from "@/lib/config";
 export default function WhatsappFab() {
   return (
     <a
-      href={linkWhatsApp("Olá! Gostaria de agendar uma quadra.")}
+      href={linkWhatsApp("Olá, Praia do Norte! Gostaria de mais informações.")}
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Falar no WhatsApp"

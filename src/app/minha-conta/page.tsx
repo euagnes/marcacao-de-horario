@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { formatarReais, linkWhatsApp, mensagemPedidoReserva } from "@/lib/config";
 
 interface Reserva {
   codigo: string;
@@ -13,12 +14,14 @@ interface Reserva {
   horaInicio: string;
   horaFim: string;
   status: string;
+  modalidade?: string | null;
+  valorTotal?: number | null;
 }
 
-const STATUS_CLS: Record<string, string> = {
-  PENDENTE: "bg-sol-500/20 text-sol-600",
-  CONFIRMADO: "bg-green-100 text-green-700",
-  CANCELADO: "bg-coral-500/20 text-coral-500",
+const STATUS: Record<string, { txt: string; cls: string }> = {
+  PENDENTE: { txt: "Aguardando aprovação", cls: "bg-sol-500/20 text-sol-600" },
+  CONFIRMADO: { txt: "Confirmada", cls: "bg-green-100 text-green-700" },
+  CANCELADO: { txt: "Cancelada", cls: "bg-coral-500/20 text-coral-500" },
 };
 
 export default function MinhaContaPage() {
@@ -191,9 +194,28 @@ export default function MinhaContaPage() {
                   </span>
                   <span className="ml-2 font-mono text-mar-600">{r.horaInicio}–{r.horaFim}</span>
                   <span className="ml-2 text-sm text-mar-400">· {r.quadra}</span>
+                  {r.valorTotal != null && (
+                    <span className="ml-2 text-sm font-semibold text-laranja-600">{formatarReais(r.valorTotal)}</span>
+                  )}
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className={`badge ${STATUS_CLS[r.status]}`}>{r.status}</span>
+                  <span className={`badge ${STATUS[r.status]?.cls ?? ""}`}>{STATUS[r.status]?.txt ?? r.status}</span>
+                  {r.status === "PENDENTE" && usuario && (
+                    <a
+                      href={linkWhatsApp(
+                        mensagemPedidoReserva({
+                          ...r,
+                          nome: usuario.nome,
+                          data: new Date(`${r.data}T00:00:00`).toLocaleDateString("pt-BR"),
+                        })
+                      )}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm font-semibold text-laranja-600 hover:underline"
+                    >
+                      Enviar pedido no WhatsApp
+                    </a>
+                  )}
                   <Link href={`/cancelar?codigo=${r.codigo}`} className="text-sm text-mar-500 hover:underline">
                     Gerenciar
                   </Link>

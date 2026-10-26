@@ -115,6 +115,10 @@ export async function POST(req: Request) {
     );
   }
 
+  // Valor da reserva = valor da hora do dia × horas (null se o dia não tem valor cadastrado)
+  const valorTotal =
+    funcionamento.valorHora == null ? null : Number(funcionamento.valorHora) * quantidade;
+
   try {
     const resultado = await prisma.$transaction(async (tx) => {
       // Conflito com bloqueios (da quadra ou geral)
@@ -170,6 +174,7 @@ export async function POST(req: Request) {
           horaFim,
           modalidade: modalidade?.trim() || null,
           observacoes: observacoes?.trim() || null,
+          valorTotal,
           status: "PENDENTE",
         },
         include: { quadra: true, cliente: true },
@@ -190,6 +195,7 @@ export async function POST(req: Request) {
           horaInicio: resultado.horaInicio,
           horaFim: resultado.horaFim,
           status: resultado.status,
+          valorTotal,
         },
       },
       { status: 201 }

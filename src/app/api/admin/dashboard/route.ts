@@ -42,6 +42,7 @@ export async function GET(req: Request) {
       horaFim: a.horaFim,
       status: a.status,
       modalidade: a.modalidade,
+      valorTotal: a.valorTotal == null ? null : Number(a.valorTotal),
       observacoes: a.observacoes,
     })),
   });
